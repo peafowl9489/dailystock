@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐾 台股每日庫存市值變化追蹤 🐾</title>
+  <!-- 引入截圖元件 HTML2Canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #FDF8F2;
+      --card-bg: #FFFFFF;
+      --primary-brown: #5C4336;
+      --light-brown: #F4E8D7;
+      --accent-orange: #E87A30;
+      --border-color: #E2D3C1;
+    }
+
+    body { 
+      font-family: "Mplus 1p", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif; 
+      max-width: 1050px; 
+      margin: 20px auto; 
+      padding: 0 15px; 
+      background-color: var(--bg-color); 
+      color: var(--primary-brown); 
+    }
+
+    h1 { 
+      text-align: center; 
+      color: var(--primary-brown); 
+      font-size: 28px;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+
+    .card { 
+      background: var(--card-bg); 
+      border-radius: 16px; 
+      padding: 22px; 
+      box-shadow: 0 4px 15px rgba(92, 67, 54, 0.08); 
+      border: 2px solid var(--border-color);
+      margin-bottom: 20px; 
+    }
+
+    h3 {
+      margin-top: 0;
+      color: var(--primary-brown);
+      font-size: 18px;
+      border-left: 5px solid var(--accent-orange);
+      padding-left: 10px;
+    }
+
+    .form-group { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    
+    input, select, button { 
+      padding: 10px 14px; 
+      font-size: 15px; 
+      border: 2px solid var(--border-color); 
+      border-radius: 10px; 
+      outline: none;
+      background-color: #FAF6F0;
+      color: var(--primary-brown);
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent-orange);
+      background-color: #FFF;
+    }
+
+    input { flex: 1; min-width: 150px; }
+
+    button { 
+      background-color: var(--accent-orange); 
+      color: white; 
+      border: none; 
+      cursor: pointer; 
+      font-weight: bold; 
+      border-radius: 10px; 
+      transition: all 0.2s ease;
+      box-shadow: 0 3px 0 #C45F1B;
+    }
+
+    button:hover { 
+      background-color: #D66D25; 
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: none;
+    }
+
+    /* 頂部總覽看板 */
+    .summary-card { 
+      display: flex; 
+      justify-content: space-around; 
+      align-items: center;
+      background: var(--light-brown); 
+      padding: 20px; 
+      border-radius: 14px; 
+      margin-bottom: 15px; 
+      flex-wrap: wrap; 
+      gap: 15px; 
+      border: 2px dashed #D6C2A9;
+    }
+
+    .summary-item { 
+      flex: 1; 
+      min-width: 220px; 
+      text-align: center;
+    }
+
+    .capture-target-box {
+      padding: 12px 20px;
+      border-radius: 12px;
+      background-color: #F4E8D7;
+      display: inline-block;
+    }
+
+    .summary-item label {
+      font-size: 14px;
+      font-weight: bold;
+      color: #7A6253;
+    }
+
+    .summary-item strong { 
+      display: block; 
+      font-size: 24px; 
+      margin-top: 6px; 
+    }
+
+    /* 狀態貼圖容器 */
+    .status-sticker-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .status-img {
+      height: 75px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+    }
+
+    /* 表格樣式 */
+    table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; font-size: 15px; }
+    
+    th, td { 
+      border-bottom: 1px solid var(--border-color); 
+      padding: 12px 10px; 
+      text-align: center; 
+    }
+
+    th { 
+      background-color: #F7EFE5; 
+      color: var(--primary-brown);
+      font-weight: bold;
+    }
+
+    th:first-child { border-top-left-radius: 10px; }
+    th:last-child { border-top-right-radius: 10px; }
+
+    .profit { color: #D32F2F; font-weight: bold; } /* 漲：台股紅 */
+    .loss { color: #2E7D32; font-weight: bold; }   /* 跌：台股綠 */
+
+    .badge { font-size: 12px; padding: 3px 8px; border-radius: 6px; font-weight: bold; margin-left: 4px; }
+    .badge-tw { background-color: #FFE0B2; color: #E65100; }
+    .badge-two { background-color: #E1F5FE; color: #0277BD; }
+
+    .status-bar { font-size: 13px; color: #8D7768; margin-top: 12px; text-align: right; }
+
+    .btn-delete { 
+      background-color: #E57373; 
+      color: white; 
+      border: none; 
+      padding: 6px 12px; 
+      font-size: 13px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      box-shadow: 0 2px 0 #B04B4B;
+    }
+
+    .btn-screenshot {
+      background-color: #8E24AA;
+      box-shadow: 0 3px 0 #5E1273;
+    }
+    .btn-screenshot:hover {
+      background-color: #7B1FA2;
+    }
+
+    .sort-control { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: normal; margin-top: 6px; justify-content: center; }
+    .sort-btn { padding: 3px 8px; font-size: 12px; background-color: #8D7768; box-shadow: 0 2px 0 #5C4336; }
+  </style>
+</head>
+<body>
+
+  <h1>🐾 台股每日庫存市值變化追蹤 🐾</h1>
+
+  <!-- 新增：GAS 設定區塊 -->
+  <div class="card" style="background-color: #FAF4EB;">
+    <h3>⚙️ 後端 API 設定</h3>
+    <div class="form-group">
+      <input type="url" id="gasUrlInput" placeholder="請貼上你的 Google Apps Script Web App 部署網址 (https://script.google.com/macros/s/.../exec)">
+      <button onclick="saveGasUrl()" style="background-color: #5B7B9A; box-shadow: 0 3px 0 #3A536B;">💾 儲存網址</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>新增持股</h3>
+    <div class="form-group">
+      <input type="text" id="stockId" placeholder="股票代號 (例: 2330 或 8454)" required>
+      <select id="marketType">
+        <option value="TWSE">上市 (TWSE)</option>
+        <option value="TPEx">上櫃 (TPEx)</option>
+      </select>
+      <input type="number" id="shares" placeholder="持有股數 (例: 1000)" required>
+      <button onclick="addStock()">＋ 新增至庫存</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+      <h3 style="margin: 0;">庫存市值總覽</h3>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-screenshot" onclick="captureSummaryOnly()">📸 截圖戰績貼圖</button>
+        <button onclick="fetchPortfolioFromGAS()" style="background-color: #4CAF50; box-shadow: 0 3px 0 #2E7D32;">🔄 重新整理資料</button>
+      </div>
+    </div>
+    
+    <!-- 市值與今日變化摘要看板 -->
+    <div class="summary-card">
+      <div class="summary-item">
+        <label>當前總市值</label>
+        <strong id="totalMarketValue">$0</strong>
+      </div>
+      
+      <div class="summary-item">
+        <div id="todayChangeCaptureArea" class="capture-target-box">
+          <label>今日市值總增減 (幅度)</label>
+          <div class="status-sticker-box">
+            <strong id="todayTotalChange">$0 (0.00%)</strong>
+            <!-- 動態貼圖區塊 -->
+            <img id="statusImg" class="status-img" src="no_effect.jpg" alt="狀態圖示">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p id="loadingText" style="text-align: center; color: #8D7768;">請先設定並儲存 GAS Web App 網址...</p>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>股票代號 / 名稱</th>
+          <th>持有股數</th>
+          <th>收盤價</th>
+          <th>單股今日漲跌</th>
+          <th>當前總市值</th>
+          <th>
+            今日市值增減 (增減%)
+            <div class="sort-control">
+              <select id="sortTarget" onchange="renderPortfolio()" style="padding: 2px 4px; font-size: 12px;">
+                <option value="amount">依增減金額</option>
+                <option value="percent">依增減幅度 (%)</option>
+              </select>
+              <button class="sort-btn" onclick="toggleSortOrder()" id="sortOrderBtn">⬇️ 高至低</button>
+            </div>
+          </th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="portfolioTable">
+        <!-- 資料繪製區 -->
+      </tbody>
+    </table>
+    <div class="status-bar" id="updateTime">上次更新時間: --</div>
+  </div>
+
+  <script>
+    let myPortfolio = [];
+    let sortAscending = false;
+
+    window.onload = () => {
+      // 頁面載入時自動取得已儲存的 GAS URL
+      const savedGasUrl = localStorage.getItem('myGasWebAppUrl');
+      if (savedGasUrl) {
+        document.getElementById('gasUrlInput').value = savedGasUrl;
+        fetchPortfolioFromGAS();
+      } else {
+        document.getElementById('loadingText').innerText = '請在上方輸入您的 GAS Web App 部署網址後點擊「儲存網址」。';
+      }
+    };
+
+    // 儲存 GAS Web App 網址到 localStorage
+    function saveGasUrl() {
+      const urlInput = document.getElementById('gasUrlInput').value.trim();
+      if (!urlInput.startsWith('https://script.google.com/')) {
+        alert('請輸入正確的 Google Apps Script 部署網址！(應以 https://script.google.com/ 開頭)');
+        return;
+      }
+      localStorage.setItem('myGasWebAppUrl', urlInput);
+      alert('GAS 網址已成功儲存！');
+      fetchPortfolioFromGAS();
+    }
+
+    // 讀取當前儲存的 GAS URL
+    function getGasUrl() {
+      const url = localStorage.getItem('myGasWebAppUrl');
+      if (!url) {
+        alert('請先在上方輸入並儲存 GAS Web App 網址！');
+        return null;
+      }
+      return url;
+    }
+
+    // 從 GAS 後端抓取數據 (doGet)
+    async function fetchPortfolioFromGAS() {
+      const gasUrl = getGasUrl();
+      if (!gasUrl) return;
+
+      const loading = document.getElementById('loadingText');
+      loading.innerText = '正在向 Google Sheet 取得最新資料與行情...';
+
+      try {
+        const res = await fetch(gasUrl);
+        const json = await res.json();
+
+        if (json.status === 'success') {
+          myPortfolio = json.data;
+          loading.innerText = '資料更新成功！';
+          document.getElementById('updateTime').innerText = `上次更新時間: ${new Date().toLocaleTimeString()}`;
+          renderPortfolio();
+        } else {
+          loading.innerText = '讀取失敗：' + (json.message || '未知錯誤');
+        }
+      } catch (err) {
+        console.error(err);
+        loading.innerText = '無法連線至 GAS 後端，請確認網址是否正確或權限是否開啟為「所有人」。';
+      }
+    }
+
+    // 新增股票至 GAS 後端 (doPost)
+    async function addStock() {
+      const gasUrl = getGasUrl();
+      if (!gasUrl) return;
+
+      const code = document.getElementById('stockId').value.trim().toUpperCase();
+      const market = document.getElementById('marketType').value;
+      const qty = parseInt(document.getElementById('shares').value);
+
+      if (!code || isNaN(qty) || qty <= 0) {
+        alert('請填寫正確的股票代號與持有股數！');
+        return;
+      }
+
+      const loading = document.getElementById('loadingText');
+      loading.innerText = '正在發送新增請求至 Google Sheet...';
+
+      try {
+        const res = await fetch(gasUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: 'add',
+            code: code,
+            market: market,
+            qty: qty
+          })
+        });
+
+        const json = await res.json();
+        if (json.status === 'success') {
+          document.getElementById('stockId').value = '';
+          document.getElementById('shares').value = '';
+          await fetchPortfolioFromGAS(); // 新增完畢後重新整理清單
+        } else {
+          alert('新增失敗：' + json.message);
+        }
+      } catch (err) {
+        alert('發送請求失敗，請確認網路連線。');
+        console.error(err);
+      }
+    }
+
+    // 刪除股票 (doPost)
+    async function deleteStock(rowIndex) {
+      const gasUrl = getGasUrl();
+      if (!gasUrl) return;
+
+      if (!confirm('確定要從 Google Sheet 刪除這檔股票嗎？')) return;
+
+      const loading = document.getElementById('loadingText');
+      loading.innerText = '正在刪除項目...';
+
+      try {
+        const res = await fetch(gasUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: 'delete',
+            rowIndex: rowIndex
+          })
+        });
+
+        const json = await res.json();
+        if (json.status === 'success') {
+          await fetchPortfolioFromGAS();
+        } else {
+          alert('刪除失敗：' + json.message);
+        }
+      } catch (err) {
+        alert('刪除失敗，請檢查連線。');
+        console.error(err);
+      }
+    }
+
+    function toggleSortOrder() {
+      sortAscending = !sortAscending;
+      const btn = document.getElementById('sortOrderBtn');
+      btn.innerText = sortAscending ? '⬆️ 低至高' : '⬇️ 高至低';
+      renderPortfolio();
+    }
+
+    function renderPortfolio() {
+      const tbody = document.getElementById('portfolioTable');
+      tbody.innerHTML = '';
+
+      let totalMarketValueSum = 0;
+      let todayTotalChangeSum = 0;
+      let yesterdayTotalMarketValueSum = 0;
+
+      const computedList = myPortfolio.map(item => {
+        const qty = item.qty || 0;
+        const currentPrice = item.currentPrice || 0;
+        const prevClose = item.prevClose || currentPrice;
+
+        const priceDiff = currentPrice - prevClose;
+        const marketValueItem = currentPrice * qty;
+        const changePercent = prevClose > 0 ? ((priceDiff / prevClose) * 100) : 0;
+        const todayMarketValueChange = priceDiff * qty;
+        const yesterdayMarketValueItem = prevClose * qty;
+
+        totalMarketValueSum += marketValueItem;
+        todayTotalChangeSum += todayMarketValueChange;
+        yesterdayTotalMarketValueSum += yesterdayMarketValueItem;
+
+        return {
+          rowIndex: item.rowIndex,
+          code: item.code,
+          market: item.market,
+          name: item.name || item.code,
+          qty: qty,
+          currentPrice,
+          priceDiff,
+          changePercent,
+          marketValueItem,
+          todayMarketValueChange
+        };
+      });
+
+      const sortTarget = document.getElementById('sortTarget')?.value || 'amount';
+      computedList.sort((a, b) => {
+        let valA = sortTarget === 'amount' ? a.todayMarketValueChange : a.changePercent;
+        let valB = sortTarget === 'amount' ? b.todayMarketValueChange : b.changePercent;
+        return sortAscending ? valA - valB : valB - valA;
+      });
+
+      computedList.forEach(item => {
+        const todayClass = item.todayMarketValueChange >= 0 ? 'profit' : 'loss';
+        const todaySign = item.todayMarketValueChange > 0 ? '+' : '';
+        const badgeClass = item.market === 'TWSE' ? 'badge-tw' : 'badge-two';
+        const badgeText = item.market === 'TWSE' ? '上市' : '上櫃';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <strong>${item.code}</strong> 
+            <span class="badge ${badgeClass}">${badgeText}</span>
+            <br><span style="color:#7A6253; font-weight:bold; font-size:14px;">${item.name}</span>
+          </td>
+          <td><strong>${item.qty.toLocaleString()}</strong></td>
+          <td>${item.currentPrice ? '$' + item.currentPrice.toFixed(2) : '計算中...'}</td>
+          <td class="${todayClass}">${todaySign}${item.priceDiff.toFixed(2)}</td>
+          <td>$${Math.round(item.marketValueItem).toLocaleString()}</td>
+          <td class="${todayClass}">
+            ${todaySign}$${Math.round(item.todayMarketValueChange).toLocaleString()}<br>
+            <small>(${todaySign}${item.changePercent.toFixed(2)}%)</small>
+          </td>
+          <td>
+            <button class="btn-delete" onclick="deleteStock(${item.rowIndex})">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const todayTotalChangePercent = yesterdayTotalMarketValueSum > 0 
+        ? ((todayTotalChangeSum / yesterdayTotalMarketValueSum) * 100) 
+        : 0;
+
+      const todayTotalClass = todayTotalChangeSum >= 0 ? 'profit' : 'loss';
+      const todayTotalSign = todayTotalChangeSum > 0 ? '+' : '';
+
+      document.getElementById('totalMarketValue').innerText = `$${Math.round(totalMarketValueSum).toLocaleString()}`;
+
+      const todayElem = document.getElementById('todayTotalChange');
+      todayElem.innerText = `${todayTotalSign}$${Math.round(todayTotalChangeSum).toLocaleString()} (${todayTotalSign}${todayTotalChangePercent.toFixed(2)}%)`;
+      todayElem.className = todayTotalClass;
+
+      const statusImg = document.getElementById('statusImg');
+      if (todayTotalChangePercent > 1.0) {
+        statusImg.src = 'earn.png';
+        statusImg.alt = '賺錢';
+      } else if (todayTotalChangePercent < -1.0) {
+        statusImg.src = 'lose.png';
+        statusImg.alt = '虧錢';
+      } else {
+        statusImg.src = 'no_effect.png';
+        statusImg.alt = '影響不大';
+      }
+    }
+
+    // 截圖「今日增減 + 貼圖」區塊
+    function captureSummaryOnly() {
+      const targetArea = document.getElementById('todayChangeCaptureArea');
+      
+      html2canvas(targetArea, {
+        scale: 2, 
+        backgroundColor: '#F4E8D7', 
+        useCORS: true
+      }).then(canvas => {
+        const today = new Date().toISOString().split('T')[0];
+        const link = document.createElement('a');
+        link.download = `今日戰績貼圖_${today}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }).catch(err => {
+        alert('截圖失敗，請確認圖片檔名與路徑！');
+        console.error(err);
+      });
+    }
+  </script>
+</body>
+</html>
