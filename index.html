@@ -172,6 +172,19 @@
 
     .status-bar { font-size: 13px; color: #8D7768; margin-top: 12px; text-align: right; }
 
+    .action-btns { display: flex; gap: 6px; justify-content: center; }
+
+    .btn-edit { 
+      background-color: #F5A623; 
+      color: white; 
+      border: none; 
+      padding: 6px 12px; 
+      font-size: 13px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      box-shadow: 0 2px 0 #C68212;
+    }
+
     .btn-delete { 
       background-color: #E57373; 
       color: white; 
@@ -199,7 +212,7 @@
 
   <h1>🐾 台股每日庫存市值變化追蹤 🐾</h1>
 
-  <!-- 新增：GAS 設定區塊 -->
+  <!-- GAS 設定區塊 -->
   <div class="card" style="background-color: #FAF4EB;">
     <h3>⚙️ 後端 API 設定</h3>
     <div class="form-group">
@@ -284,7 +297,6 @@
     let sortAscending = false;
 
     window.onload = () => {
-      // 頁面載入時自動取得已儲存的 GAS URL
       const savedGasUrl = localStorage.getItem('myGasWebAppUrl');
       if (savedGasUrl) {
         document.getElementById('gasUrlInput').value = savedGasUrl;
@@ -294,7 +306,6 @@
       }
     };
 
-    // 儲存 GAS Web App 網址到 localStorage
     function saveGasUrl() {
       const urlInput = document.getElementById('gasUrlInput').value.trim();
       if (!urlInput.startsWith('https://script.google.com/')) {
@@ -306,7 +317,6 @@
       fetchPortfolioFromGAS();
     }
 
-    // 讀取當前儲存的 GAS URL
     function getGasUrl() {
       const url = localStorage.getItem('myGasWebAppUrl');
       if (!url) {
@@ -316,7 +326,6 @@
       return url;
     }
 
-    // 從 GAS 後端抓取數據 (doGet)
     async function fetchPortfolioFromGAS() {
       const gasUrl = getGasUrl();
       if (!gasUrl) return;
@@ -342,7 +351,6 @@
       }
     }
 
-    // 新增股票至 GAS 後端 (doPost)
     async function addStock() {
       const gasUrl = getGasUrl();
       if (!gasUrl) return;
@@ -375,7 +383,7 @@
         if (json.status === 'success') {
           document.getElementById('stockId').value = '';
           document.getElementById('shares').value = '';
-          await fetchPortfolioFromGAS(); // 新增完畢後重新整理清單
+          await fetchPortfolioFromGAS();
         } else {
           alert('新增失敗：' + json.message);
         }
@@ -385,7 +393,46 @@
       }
     }
 
-    // 刪除股票 (doPost)
+    // 新增：修改持股數量功能 🌟
+    async function editShares(rowIndex, code, currentQty) {
+      const gasUrl = getGasUrl();
+      if (!gasUrl) return;
+
+      const newQtyStr = prompt(`請輸入 ${code} 的新持有股數：`, currentQty);
+      if (newQtyStr === null) return; // 使用者取消
+
+      const newQty = parseInt(newQtyStr.trim());
+      if (isNaN(newQty) || newQty <= 0) {
+        alert('請輸入大於 0 的有效股數數字！');
+        return;
+      }
+
+      const loading = document.getElementById('loadingText');
+      loading.innerText = '正在更新股數至 Google Sheet...';
+
+      try {
+        const res = await fetch(gasUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: 'edit',
+            rowIndex: rowIndex,
+            qty: newQty
+          })
+        });
+
+        const json = await res.json();
+        if (json.status === 'success') {
+          await fetchPortfolioFromGAS();
+        } else {
+          alert('修改失敗：' + json.message);
+        }
+      } catch (err) {
+        alert('修改失敗，請檢查連線。');
+        console.error(err);
+      }
+    }
+
     async function deleteStock(rowIndex) {
       const gasUrl = getGasUrl();
       if (!gasUrl) return;
@@ -490,7 +537,10 @@
             <small>(${todaySign}${item.changePercent.toFixed(2)}%)</small>
           </td>
           <td>
-            <button class="btn-delete" onclick="deleteStock(${item.rowIndex})">刪除</button>
+            <div class="action-btns">
+              <button class="btn-edit" onclick="editShares(${item.rowIndex}, '${item.code}', ${item.qty})">修改</button>
+              <button class="btn-delete" onclick="deleteStock(${item.rowIndex})">刪除</button>
+            </div>
           </td>
         `;
         tbody.appendChild(tr);
@@ -522,7 +572,6 @@
       }
     }
 
-    // 截圖「今日增減 + 貼圖」區塊
     function captureSummaryOnly() {
       const targetArea = document.getElementById('todayChangeCaptureArea');
       
