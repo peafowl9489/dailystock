@@ -224,7 +224,7 @@
   <div class="card">
     <h3>新增持股</h3>
     <div class="form-group">
-      <input type="text" id="stockId" placeholder="股票代號 (例: 2330 或 8454)" required>
+      <input type="text" id="stockId" placeholder="股票代號 (例: 2330 或 0050)" required>
       <select id="marketType">
         <option value="TWSE">上市 (TWSE)</option>
         <option value="TPEx">上櫃 (TPEx)</option>
@@ -238,7 +238,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
       <h3 style="margin: 0;">庫存市值總覽</h3>
       <div style="display: flex; gap: 8px;">
-        <button class="btn-screenshot" onclick="captureSummaryOnly()">📸 截圖戰績貼圖</button>
+        <button class="btn-screenshot" onclick="captureSummaryOnly()">📸 截圖今日損益</button>
         <button onclick="fetchPortfolioFromGAS()" style="background-color: #4CAF50; box-shadow: 0 3px 0 #2E7D32;">🔄 重新整理資料</button>
       </div>
     </div>
@@ -246,7 +246,7 @@
     <!-- 市值與今日變化摘要看板 -->
     <div class="summary-card">
       <div class="summary-item">
-        <label>當前總市值</label>
+        <label>庫存總市值</label>
         <strong id="totalMarketValue">$0</strong>
       </div>
       
@@ -269,9 +269,9 @@
         <tr>
           <th>股票代號 / 名稱</th>
           <th>持有股數</th>
-          <th>收盤價</th>
-          <th>單股今日漲跌</th>
-          <th>當前總市值</th>
+          <th>最新/收盤價</th>
+          <th>今日漲跌</th>
+          <th>庫存市值</th>
           <th>
             今日市值增減 (增減%)
             <div class="sort-control">
@@ -582,7 +582,7 @@
       }).then(canvas => {
         const today = new Date().toISOString().split('T')[0];
         const link = document.createElement('a');
-        link.download = `今日戰績貼圖_${today}.png`;
+        link.download = `今日戰績_${today}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       }).catch(err => {
