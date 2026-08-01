@@ -50,6 +50,20 @@
       padding-left: 10px;
     }
 
+    /* 新增教學超連結樣式 */
+    .tutorial-link {
+      font-size: 14px;
+      margin-left: 10px;
+      color: #0277BD;
+      text-decoration: none;
+      font-weight: normal;
+    }
+
+    .tutorial-link:hover {
+      text-decoration: underline;
+      color: #01579B;
+    }
+
     .form-group { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     
     input, select, button { 
@@ -212,9 +226,12 @@
 
   <h1>🐾 台股每日庫存市值變化追蹤 🐾</h1>
 
-  <!-- GAS 設定區塊 -->
+  <!-- GAS 設定區塊 (已加入設定教學連結) -->
   <div class="card" style="background-color: #FAF4EB;">
-    <h3>⚙️ 後端 API 設定</h3>
+    <h3>
+      ⚙️ 後端 API 設定
+      <a href="https://drive.google.com/drive/folders/1LYLpjT0VJcyV4iRtXYcIQ_2jOCCe9Pcr?usp=drive_link" target="_blank" class="tutorial-link">📖 設定教學</a>
+    </h3>
     <div class="form-group">
       <input type="url" id="gasUrlInput" placeholder="請貼上你的 Google Apps Script Web App 部署網址 (https://script.google.com/macros/s/.../exec)">
       <button onclick="saveGasUrl()" style="background-color: #5B7B9A; box-shadow: 0 3px 0 #3A536B;">💾 儲存網址</button>
@@ -224,7 +241,7 @@
   <div class="card">
     <h3>新增持股</h3>
     <div class="form-group">
-      <input type="text" id="stockId" placeholder="股票代號 (例: 2330 或 0050)" required>
+      <input type="text" id="stockId" placeholder="股票代號 (例: 2330 或 8454)" required>
       <select id="marketType">
         <option value="TWSE">上市 (TWSE)</option>
         <option value="TPEx">上櫃 (TPEx)</option>
@@ -256,7 +273,7 @@
           <div class="status-sticker-box">
             <strong id="todayTotalChange">$0 (0.00%)</strong>
             <!-- 動態貼圖區塊：預設載入 no_effect.png -->
-            <img id="statusImg" class="status-img" src="no_effect.jpg" alt="影響不大">
+            <img id="statusImg" class="status-img" src="no_effect.png" alt="影響不大">
           </div>
         </div>
       </div>
@@ -296,9 +313,7 @@
     let myPortfolio = [];
     let sortAscending = false;
 
-    // 修改點：網頁載入時預設先執行一次圖片與介面的重繪
     window.onload = () => {
-      // 先確定貼圖顯示預設的 no_effect.png
       resetDefaultStatus();
 
       const savedGasUrl = localStorage.getItem('myGasWebAppUrl');
@@ -310,7 +325,6 @@
       }
     };
 
-    // 設定預設貼圖邏輯
     function resetDefaultStatus() {
       const statusImg = document.getElementById('statusImg');
       if (statusImg) {
@@ -573,7 +587,6 @@
       todayElem.innerText = `${todayTotalSign}$${Math.round(todayTotalChangeSum).toLocaleString()} (${todayTotalSign}${todayTotalChangePercent.toFixed(2)}%)`;
       todayElem.className = todayTotalClass;
 
-      // 判斷漲跌幅更換圖片
       const statusImg = document.getElementById('statusImg');
       if (todayTotalChangePercent > 1.0) {
         statusImg.src = 'earn.png';
